@@ -1,0 +1,11 @@
+.DS_Store
+.gradle/
+.idea/
+local.properties
+build/
+app/build/
+app/.cxx/
+macos/build/
+macos/app/.build/
+*.apk
+*.aab

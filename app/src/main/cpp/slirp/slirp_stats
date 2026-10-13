@@ -1,0 +1,108 @@
+Slirp 1.0.17 - Debugging Started.
+Debugging Started level 15.
+ 
+IP stats:
+     116 total packets received (0 were unaligned)
+       0 with incorrect version
+       0 with bad header checksum
+       0 with length too short (len < sizeof(iphdr))
+       0 with length too small (len < ip->len)
+       0 with bad header length
+       0 with bad packet length
+       0 fragments received
+       0 fragments dropped
+       0 fragments timed out
+       0 packets reassembled ok
+       0 outgoing packets fragmented
+       0 total outgoing fragments
+       0 with bad protocol field
+     116 total packets delivered
+ 
+TCP stats:
+      56 packets sent
+              47 data packets (11680 bytes)
+               0 data packets retransmitted (0 bytes)
+               6 ack-only packets (0 delayed)
+               0 URG only packets
+               0 window probe packets
+               0 window update packets
+               3 control (SYN/FIN/RST) packets
+              16 times tcp_output did nothing
+      62 packets received
+              53 acks (for 11683 bytes)
+               0 duplicate acks
+               0 acks for unsent data
+               3 packets received in sequence (14 bytes)
+               0 completely duplicate packets (0 bytes)
+               0 packets with some duplicate data (0 bytes duped)
+               3 out-of-order packets (0 bytes)
+               0 packets of data after window (0 bytes)
+               0 window probes
+               0 window update packets
+               0 packets received after close
+               0 discarded for bad checksums
+               0 discarded for bad header offset fields
+       0 connection requests
+       3 connection accepts
+       3 connections established (including accepts)
+       3 connections closed (including 0 drop)
+       0 embryonic connections dropped
+      49 segments we tried to get rtt (49 succeeded)
+       3 retransmit timeouts
+               0 connections dropped by rxmt timeout
+       0 persist timeouts
+       0 keepalive timeouts
+               0 keepalive probes sent
+               0 connections dropped by keepalive
+      11 correct ACK header predictions
+       3 correct data packet header predictions
+       6 TCP cache misses
+ 
+UDP stats:
+       5 datagrams received
+       0 with packets shorter than header
+       0 with bad checksums
+       0 with data length larger than packet
+       0 UDP socket cache misses
+       5 datagrams sent
+ 
+ICMP stats:
+      49 ICMP packets received
+       0 were too short
+       0 with bad checksums
+       0 with type not supported
+       0 with bad type feilds
+      49 ICMP packets sent in reply
+ 
+Mbuf stats:
+       3 mbufs allocated (3 max)
+       3 mbufs on free list
+       0 mbufs on used list
+       0 mbufs queued as packets
+
+ 
+Proto[state]     Sock     Local Address, Port  Remote Address, Port RecvQ SendQ
+ 
+Unit 0:
+  using SLIP encapsulation (VJ compression is off (for now))
+  4800 baudrate
+  interface is up
+  using fd 3, guardian pid is 0
+  towrite is 512 bytes
+Interface stats:
+     110 output packets sent (18956 bytes)
+       0 output packets dropped (0 bytes)
+     116 input packets received (6949 bytes)
+       0 input packets dropped (0 bytes)
+       0 bad input packets
+ 
+VJ compression stats:
+       0 outbound packets (0 compressed)
+       0 searches for connection stats (0 misses)
+       0 inbound uncompressed packets
+       0 inbound compressed packets
+       0 inbound unknown type packets
+       0 inbound packets tossed due to error
+tty_detached...
+ ttyp = 100289f02f0
+ exiting = 1

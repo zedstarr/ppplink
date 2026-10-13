@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">PPP Link</string>
+    <string name="notification_channel_name">PPP Link service</string>
+    <string name="notification_channel_desc">Shows ongoing PPP bridge connection status and throughput</string>
+</resources>

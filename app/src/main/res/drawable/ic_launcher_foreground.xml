@@ -1,0 +1,12 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="1.08" android:scaleY="1.08" android:translateY="3">
+        <path android:fillColor="#DADAD6" android:pathData="M36,31 L72,31 A3,3 0 0 1 75,34 L75,53 L33,53 L33,34 A3,3 0 0 1 36,31 Z"/>
+        <path android:fillColor="#14302E" android:pathData="M37.5,34.5 L70.5,34.5 L70.5,50 L37.5,50 Z"/>
+        <path android:strokeColor="#4FD1C5" android:strokeWidth="1.8" android:strokeLineJoin="round" android:strokeLineCap="round" android:pathData="M40,46 L45,46 L45,38.5 L51,38.5 L51,46 L57,46 L57,38.5 L63,38.5 L63,46 L68,46"/>
+        <path android:fillColor="#9E9E99" android:pathData="M33,53 L75,53 L75,55.5 L33,55.5 Z"/>
+        <path android:fillColor="#C2C2BD" android:pathData="M33,55.5 L75,55.5 L78,69 A1.5,1.5 0 0 1 76.5,70.5 L31.5,70.5 A1.5,1.5 0 0 1 30,69 Z"/>
+        <path android:fillColor="#8F8F8A" android:pathData="M35.00,58 L37.99,58 L37.99,60.4 L35.00,60.4 Z M38.89,58 L41.88,58 L41.88,60.4 L38.89,60.4 Z M42.78,58 L45.77,58 L45.77,60.4 L42.78,60.4 Z M46.67,58 L49.66,58 L49.66,60.4 L46.67,60.4 Z M50.56,58 L53.55,58 L53.55,60.4 L50.56,60.4 Z M54.45,58 L57.44,58 L57.44,60.4 L54.45,60.4 Z M58.34,58 L61.33,58 L61.33,60.4 L58.34,60.4 Z M62.23,58 L65.22,58 L65.22,60.4 L62.23,60.4 Z M66.12,58 L69.11,58 L69.11,60.4 L66.12,60.4 Z M70.01,58 L73.00,58 L73.00,60.4 L70.01,60.4 Z M34.20,61.5 L37.35,61.5 L37.35,63.9 L34.20,63.9 Z M38.25,61.5 L41.40,61.5 L41.40,63.9 L38.25,63.9 Z M42.30,61.5 L45.45,61.5 L45.45,63.9 L42.30,63.9 Z M46.35,61.5 L49.50,61.5 L49.50,63.9 L46.35,63.9 Z M50.40,61.5 L53.55,61.5 L53.55,63.9 L50.40,63.9 Z M54.45,61.5 L57.60,61.5 L57.60,63.9 L54.45,63.9 Z M58.50,61.5 L61.65,61.5 L61.65,63.9 L58.50,63.9 Z M62.55,61.5 L65.70,61.5 L65.70,63.9 L62.55,63.9 Z M66.60,61.5 L69.75,61.5 L69.75,63.9 L66.60,63.9 Z M70.65,61.5 L73.80,61.5 L73.80,63.9 L70.65,63.9 Z M33.40,65 L36.71,65 L36.71,67.4 L33.40,67.4 Z M37.61,65 L40.92,65 L40.92,67.4 L37.61,67.4 Z M41.82,65 L45.13,65 L45.13,67.4 L41.82,67.4 Z M46.03,65 L49.34,65 L49.34,67.4 L46.03,67.4 Z M50.24,65 L53.55,65 L53.55,67.4 L50.24,67.4 Z M54.45,65 L57.76,65 L57.76,67.4 L54.45,67.4 Z M58.66,65 L61.97,65 L61.97,67.4 L58.66,67.4 Z M62.87,65 L66.18,65 L66.18,67.4 L62.87,67.4 Z M67.08,65 L70.39,65 L70.39,67.4 L67.08,67.4 Z M71.29,65 L74.60,65 L74.60,67.4 L71.29,67.4 Z"/>
+    </group>
+</vector>

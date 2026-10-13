@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Prolific PL2303 (VID 0x067B = 1659) -->
+    <usb-device vendor-id="1659" />
+    <usb-device vendor-id="1659" product-id="8963" />  <!-- 0x2303 -->
+    <usb-device vendor-id="1659" product-id="9123" />  <!-- 0x23A3 -->
+
+    <!-- FTDI (VID 0x0403 = 1027) -->
+    <usb-device vendor-id="1027" />
+
+    <!-- Silicon Labs CP210x (VID 0x10C4 = 4292) -->
+    <usb-device vendor-id="4292" />
+
+    <!-- WCH CH34x (VID 0x1A86 = 6790) -->
+    <usb-device vendor-id="6790" />
+</resources>

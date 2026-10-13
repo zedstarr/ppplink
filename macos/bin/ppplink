@@ -1,0 +1,341 @@
+#!/bin/bash
+# ppplink - PPP Link for macOS (and Linux): a PPP server for retro computers.
+# Copyright 2026 zedstarr. Licensed under the Apache License, Version 2.0.
+#
+# Plug a USB serial adapter into the Mac, connect it to the retro computer, run
+# `ppplink`, and the computer can dial in over PPP and use the Mac's internet
+# connection. No root, no ppp0, no NAT: slirp remakes every connection as an
+# ordinary connection from the Mac.
+#
+# Written for the bash 3.2 that ships with macOS.
+
+set -u
+
+VERSION="@VERSION@"
+LIBEXECDIR="${PPPLINK_LIBEXEC:-@LIBEXECDIR@}"
+ENGINE="$LIBEXECDIR/ppplink-engine"
+SLIRP="$LIBEXECDIR/@SLIRP_NAME@"
+DOCDIR="@DOCDIR@"
+CONFIG_FILE="${PPPLINK_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/ppplink/ppplink.conf}"
+
+# Defaults, then the config file, then command-line options.
+PORT=auto
+BAUD=115200
+FLOW=on
+MODE=direct
+MTU=1500
+DNS=auto
+WAIT=yes
+KEEP_AWAKE=yes
+TCP=
+HEX=no
+
+die() { echo "ppplink: $*" >&2; exit 2; }
+
+usage() {
+    cat <<EOF
+ppplink $VERSION - PPP server for retro computers over a USB serial adapter
+
+usage:
+  ppplink [start] [options]   run the link (Ctrl-C stops it; Ctrl-T shows byte counts on macOS)
+  ppplink list                list serial ports
+  ppplink setup               show the settings to use on the retro computer
+  ppplink config [init]       show settings and the config file; init writes a commented one
+  ppplink version
+  ppplink help
+
+options for start:
+  -p, --port PATH|auto   serial port (default: auto, the first USB serial adapter)
+  -b, --baud N           line speed (default 115200)
+      --flow on|off      RTS/CTS hardware flow control (default on)
+  -m, --mode direct|modem
+                         modem answers AT commands with OK and ATD with CONNECT
+      --mtu N            MTU/MRU, 296-1500 (default 1500; try 576 on slow or flaky lines)
+      --dns auto|A.B.C.D auto uses the Mac's DNS and follows network changes
+      --once             exit when the adapter is unplugged instead of waiting for it
+      --no-keep-awake    let the Mac idle-sleep while the link is up
+      --tcp PORT         debug bridge: accept one TCP client on 127.0.0.1:PORT instead
+      --hex              log every byte in both directions
+
+Settings file: $CONFIG_FILE
+EOF
+}
+
+# ------------------------------------------------------------------ config
+
+trim() { local s="$1"; s="${s#"${s%%[![:space:]]*}"}"; s="${s%"${s##*[![:space:]]}"}"; printf '%s' "$s"; }
+
+load_config() {
+    [ -f "$CONFIG_FILE" ] || return 0
+    local raw key value n=0
+    while IFS= read -r raw || [ -n "$raw" ]; do
+        n=$((n + 1))
+        raw="${raw%%#*}"
+        raw="$(trim "$raw")"
+        [ -z "$raw" ] && continue
+        case "$raw" in
+            *=*) ;;
+            *) echo "ppplink: $CONFIG_FILE line $n ignored: $raw" >&2; continue ;;
+        esac
+        key="$(trim "${raw%%=*}")"
+        value="$(trim "${raw#*=}")"
+        value="${value#\"}"; value="${value%\"}"
+        case "$key" in
+            PORT) PORT="$value" ;;
+            BAUD) BAUD="$value" ;;
+            FLOW) FLOW="$value" ;;
+            MODE) MODE="$value" ;;
+            MTU) MTU="$value" ;;
+            DNS) DNS="$value" ;;
+            WAIT) WAIT="$value" ;;
+            KEEP_AWAKE) KEEP_AWAKE="$value" ;;
+            *) echo "ppplink: $CONFIG_FILE line $n: unknown setting $key" >&2 ;;
+        esac
+    done < "$CONFIG_FILE"
+}
+
+is_number() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
+
+is_ipv4() {
+    local IFS=. a b c d extra
+    read -r a b c d extra <<EOF
+$1
+EOF
+    [ -z "${extra:-}" ] || return 1
+    for o in "$a" "$b" "$c" "$d"; do
+        is_number "$o" && [ "$o" -le 255 ] || return 1
+    done
+}
+
+lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+
+validate() {
+    FLOW="$(lower "$FLOW")"; MODE="$(lower "$MODE")"; WAIT="$(lower "$WAIT")"
+    KEEP_AWAKE="$(lower "$KEEP_AWAKE")"; DNS="$(lower "$DNS")"
+    is_number "$BAUD" && [ "$BAUD" -ge 300 ] || die "baud must be a number, e.g. 115200"
+    case "$FLOW" in on|yes|rtscts) FLOW=on ;; off|no|none) FLOW=off ;; *) die "flow must be on or off" ;; esac
+    case "$MODE" in direct|modem) ;; *) die "mode must be direct or modem" ;; esac
+    is_number "$MTU" && [ "$MTU" -ge 296 ] && [ "$MTU" -le 1500 ] || die "mtu must be 296-1500"
+    [ "$DNS" = auto ] || is_ipv4 "$DNS" || die "dns must be auto or an IPv4 address"
+    case "$WAIT" in yes|no) ;; *) die "WAIT must be yes or no" ;; esac
+    case "$KEEP_AWAKE" in yes|no) ;; *) die "KEEP_AWAKE must be yes or no" ;; esac
+    if [ -n "$TCP" ]; then
+        is_number "$TCP" && [ "$TCP" -ge 1 ] && [ "$TCP" -le 65535 ] || die "tcp port must be 1-65535"
+    fi
+    if [ "$PORT" != auto ]; then
+        case "$PORT" in /*) ;; *) PORT="/dev/$PORT" ;; esac   # allow "cu.usbserial-1410"
+    fi
+}
+
+show_config() {
+    echo "Settings file: $CONFIG_FILE$([ -f "$CONFIG_FILE" ] || echo ' (not created; defaults in use)')"
+    echo
+    echo "PORT=$PORT"
+    echo "BAUD=$BAUD"
+    echo "FLOW=$FLOW"
+    echo "MODE=$MODE"
+    echo "MTU=$MTU"
+    echo "DNS=$DNS"
+    echo "WAIT=$WAIT"
+    echo "KEEP_AWAKE=$KEEP_AWAKE"
+}
+
+init_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        echo "$CONFIG_FILE already exists."
+        return 0
+    fi
+    mkdir -p "$(dirname "$CONFIG_FILE")" || die "cannot create $(dirname "$CONFIG_FILE")"
+    cat > "$CONFIG_FILE" <<'EOF'
+# PPP Link settings. Command-line options override these.
+
+# Serial port: auto (the first USB serial adapter) or a path, e.g. /dev/cu.usbserial-1410
+PORT=auto
+
+# Line speed. Must match the retro computer.
+BAUD=115200
+
+# RTS/CTS hardware flow control: on or off. Use on if the cable has the wires for it.
+FLOW=on
+
+# direct: PPP starts straight away. modem: answers AT commands, CONNECT on ATD.
+MODE=direct
+
+# 296-1500. 576 can help on slow or unreliable lines.
+MTU=1500
+
+# auto: the Mac's own DNS, following network changes. Or an IPv4 address, e.g. 1.1.1.1
+DNS=auto
+
+# yes: wait for the adapter, and for it to come back if it is unplugged.
+WAIT=yes
+
+# yes: stop the Mac idle-sleeping while ppplink runs (closing the lid still sleeps).
+KEEP_AWAKE=yes
+EOF
+    echo "Wrote $CONFIG_FILE"
+}
+
+# ------------------------------------------------------------------ commands
+
+check_install() {
+    [ -x "$ENGINE" ] || die "engine not found at $ENGINE (reinstall, or set PPPLINK_LIBEXEC)"
+    [ -x "$SLIRP" ] || die "slirp not found at $SLIRP (reinstall, or set PPPLINK_LIBEXEC)"
+}
+
+# Explains an adapter that's plugged in but has no serial port (macOS only).
+usb_hint() {
+    command -v ioreg >/dev/null 2>&1 || return 0
+    local usb
+    usb="$(ioreg -p IOUSB -l -w0 2>/dev/null | grep '"idVendor" = ')"
+    if printf '%s' "$usb" | grep -q '"idVendor" = 1659$'; then
+        cat <<EOF
+
+A Prolific (PL2303) USB serial adapter is plugged in, but macOS hasn't made a
+serial port for it. macOS needs Prolific's driver for PL2303 chips; install it,
+then approve it in System Settings > General > Login Items & Extensions
+(Driver Extensions). Prolific's driver refuses some older and clone PL2303
+chips; an FTDI- or CH340-based adapter avoids the problem.
+EOF
+    elif printf '%s' "$usb" | grep -qE '"idVendor" = (1027|6790|4292)$'; then
+        cat <<EOF
+
+A USB serial adapter (FTDI, CH34x or CP210x) is plugged in, but no serial port
+has appeared. Try another USB port or cable, and check System Settings >
+General > Login Items & Extensions if you installed a vendor driver.
+EOF
+    fi
+}
+
+cmd_list() {
+    check_install
+    local ports
+    ports="$("$ENGINE" --list-ports)"
+    if [ -n "$ports" ]; then
+        echo "USB serial ports (auto uses the first):"
+        printf '%s\n' "$ports" | sed 's/^/  /'
+    else
+        echo "No USB serial adapter found."
+        usb_hint
+    fi
+    if [ "$(uname -s)" = Darwin ]; then
+        local others
+        others="$(ls /dev/cu.* 2>/dev/null | grep -vxF "$ports" | grep -viE 'bluetooth|debug-console|wlan-debug' || true)"
+        if [ -n "$others" ]; then
+            echo
+            echo "Other serial ports:"
+            printf '%s\n' "$others" | sed 's/^/  /'
+        fi
+    fi
+}
+
+cmd_setup() {
+    local flow_text="hardware (RTS/CTS)"
+    [ "$FLOW" = off ] && flow_text="none"
+    cat <<EOF
+Settings for the retro computer
+
+  Serial         $BAUD baud, 8 data bits, no parity, 1 stop bit, flow control: $flow_text
+  Cable          null-modem (crossed) between the client and the USB serial adapter
+  Connection     PPP, no login script or password needed
+EOF
+    if [ "$MODE" = modem ]; then
+        echo "  Dialling       a modem connection; dial any number (ppplink answers ATD with CONNECT)"
+    else
+        echo "  Dialling       a direct/cable connection, no dialling"
+    fi
+    cat <<EOF
+  IP address     10.0.2.15 static, or obtain automatically
+  Gateway        the PPP link; 10.0.2.2 if an address is required
+  DNS            10.0.2.3, secondary 1.1.1.1
+
+This computer is 10.0.2.2 as seen from the client.
+EOF
+}
+
+cmd_start() {
+    check_install
+    local args
+    args=(--slirp "$SLIRP" --baud "$BAUD" --mode "$MODE" --mtu "$MTU" --dns "$DNS")
+    if [ "$FLOW" = on ]; then args+=(--flow rtscts); else args+=(--flow none); fi
+    [ "$HEX" = yes ] && args+=(--hex)
+
+    if [ -n "$TCP" ]; then
+        args+=(--tcp "$TCP")
+        echo "PPP Link $VERSION: debug bridge on 127.0.0.1:$TCP. Ctrl-C to stop."
+    else
+        args+=(--line "$PORT")
+        [ "$WAIT" = yes ] && args+=(--wait)
+        local where="$PORT"
+        if [ "$PORT" = auto ]; then
+            where="$("$ENGINE" --list-ports | head -n 1)"
+            if [ -z "$where" ]; then
+                if [ "$WAIT" = yes ]; then
+                    where="the first USB serial adapter plugged in"
+                    usb_hint
+                else
+                    echo "No USB serial adapter found." >&2
+                    usb_hint >&2
+                    exit 2
+                fi
+            fi
+        fi
+        local keys="Ctrl-C to stop"
+        [ "$(uname -s)" = Darwin ] && keys="$keys, Ctrl-T for byte counts"
+        echo "PPP Link $VERSION on $where at $BAUD baud ($MODE, flow control $FLOW). $keys."
+        echo "Client settings: 'ppplink setup'."
+    fi
+    echo
+
+    # Keep the Mac from idle-sleeping for as long as the engine runs. The engine
+    # takes over this shell's PID (exec), which caffeinate watches.
+    if [ "$KEEP_AWAKE" = yes ] && command -v caffeinate >/dev/null 2>&1; then
+        caffeinate -i -w $$ &
+    fi
+    exec "$ENGINE" "${args[@]}"
+}
+
+# ------------------------------------------------------------------ main
+
+load_config
+
+COMMAND=start
+case "${1:-}" in
+    start|list|setup|config|version|help) COMMAND="$1"; shift ;;
+    --version|-V) COMMAND=version; shift ;;
+    -h|--help) COMMAND=help; shift ;;
+esac
+
+CONFIG_INIT=no
+while [ $# -gt 0 ]; do
+    opt="$1"
+    case "$opt" in
+        -p|--port|-b|--baud|--flow|-m|--mode|--mtu|--dns|--tcp)
+            [ $# -ge 2 ] || die "$opt needs a value"
+            val="$2"; shift 2
+            case "$opt" in
+                -p|--port) PORT="$val" ;;
+                -b|--baud) BAUD="$val" ;;
+                --flow) FLOW="$val" ;;
+                -m|--mode) MODE="$val" ;;
+                --mtu) MTU="$val" ;;
+                --dns) DNS="$val" ;;
+                --tcp) TCP="$val" ;;
+            esac ;;
+        --once) WAIT=no; shift ;;
+        --no-keep-awake) KEEP_AWAKE=no; shift ;;
+        --hex) HEX=yes; shift ;;
+        init) [ "$COMMAND" = config ] || die "unknown argument: $opt"; CONFIG_INIT=yes; shift ;;
+        -h|--help) usage; exit 0 ;;
+        *) die "unknown option: $opt (try 'ppplink help')" ;;
+    esac
+done
+
+case "$COMMAND" in
+    help) usage ;;
+    version) echo "ppplink $VERSION"; [ -f "$DOCDIR/NOTICE" ] && echo "Licences and credits: $DOCDIR" ;;
+    list) cmd_list ;;
+    setup) validate; cmd_setup ;;
+    config) if [ "$CONFIG_INIT" = yes ]; then init_config; else validate; show_config; fi ;;
+    start) validate; cmd_start ;;
+esac
