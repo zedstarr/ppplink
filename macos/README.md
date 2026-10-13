@@ -23,7 +23,6 @@ Both run the same engine (`ppplink-engine`), so they behave the same.
 With Homebrew (once the tap is published):
 
 ```
-brew tap zedstarr/ppplink https://codeberg.org/zedstarr/homebrew-ppplink
 brew install zedstarr/ppplink/ppplink
 ```
 

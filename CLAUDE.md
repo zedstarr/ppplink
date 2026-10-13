@@ -3,7 +3,8 @@
 Android app (Kotlin + Compose, NDK) that acts as a PPP server for retro computers
 over a USB serial adapter, plus a macOS command and menu-bar app (`macos/`).
 App ID `org.ppplink`. Author: zedstarr.
-Repository: https://codeberg.org/zedstarr/ppplink (Codeberg, not GitHub).
+Repository: https://github.com/zedstarr/ppplink (GitHub; not Codeberg, whose
+terms forbid AI-generated code).
 
 ## Architecture (don't redesign)
 - `app/src/main/cpp/slirp/` — Slirp-CK 1.0.18 from github.com/MarkWllms/slirp-termux,
@@ -42,13 +43,13 @@ Repository: https://codeberg.org/zedstarr/ppplink (Codeberg, not GitHub).
   with only the Command Line Tools, recent SDKs fail with "SwiftUIMacros ... not
   found". Use a stored `State(initialValue:)` plus a nonmutating accessor, or
   `@AppStorage`/`@StateObject`, which aren't macros.
-- `Formula/ppplink.rb`: template for the tap at codeberg.org/zedstarr/homebrew-ppplink;
-  update `url` (https://codeberg.org/zedstarr/ppplink/archive/vX.Y.Z.tar.gz) and
-  `sha256` per release. Non-GitHub taps need `brew tap zedstarr/ppplink <url>` first.
+- `Formula/ppplink.rb`: template for the tap at github.com/zedstarr/homebrew-ppplink;
+  update `url` (https://github.com/zedstarr/ppplink/archive/refs/tags/vX.Y.Z.tar.gz)
+  and `sha256` per release.
 - Status: the command works with the MC218 on a Mac; the app builds with the
   Command Line Tools (`make -C macos app`) and runs. Build and test:
   `make -C macos && make -C macos test && make -C macos app`.
-- No CI: Codeberg has no macOS runners. Run `make -C macos test` before pushing.
+- CI: `.github/workflows/macos.yml` builds, tests and packages on a macOS runner.
 
 ## Constraints
 - Project licence: Apache-2.0 (`LICENSE`, `NOTICE`), copyright zedstarr.
@@ -62,8 +63,8 @@ Repository: https://codeberg.org/zedstarr/ppplink (Codeberg, not GitHub).
 - No restricted permissions (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS was removed on purpose).
 - No proprietary dependencies (no Play Services, Firebase, analytics).
 - Public identity is the handle `zedstarr` only. Never add the author's real name or
-  personal email to any file, metadata or commit. Commits use the Codeberg no-reply
-  address (zedstarr@noreply.codeberg.org; confirm in Codeberg settings); check `git config user.name` / `user.email` before the first commit.
+  personal email to any file, metadata or commit. Commits use the GitHub no-reply
+  address (<id>+zedstarr@users.noreply.github.com, from GitHub Settings > Emails); check `git config user.name` / `user.email` before the first commit.
 
 ## Open tasks: F-Droid release
 1. ~~Add `LICENSE`~~ done: Apache-2.0. Use `License: Apache-2.0` in the F-Droid recipe.
@@ -77,8 +78,8 @@ Repository: https://codeberg.org/zedstarr/ppplink (Codeberg, not GitHub).
    local-only files, and that `versionName`/`versionCode` are set.
 5. Commit, tag `v1.0.0`, push.
 6. Draft `metadata/org.ppplink.yml` for fdroiddata (Categories: Connectivity,
-   System; License; SourceCode: https://codeberg.org/zedstarr/ppplink,
-   IssueTracker: https://codeberg.org/zedstarr/ppplink/issues, Repo: the .git URL; Builds entry with `ndk:`,
+   System; License; SourceCode: https://github.com/zedstarr/ppplink,
+   IssueTracker: https://github.com/zedstarr/ppplink/issues, Repo: the .git URL; Builds entry with `ndk:`,
    `gradle: [yes]`, `subdir: app`; AutoUpdateMode: Version; UpdateCheckMode: Tags).
    Test with `fdroid lint`/`fdroid build` if fdroidserver is installed; otherwise
    leave it for the fdroiddata fork's CI.
