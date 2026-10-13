@@ -122,6 +122,8 @@ New: SerialLine.kt. Removed: DebugTcpBridge.kt.
 - `macos/app`: SwiftUI menu-bar app (macOS 13+) running the bundled engine.
 - slirp is built from `app/src/main/cpp/slirp` unchanged, so both platforms share
   the patches. Also builds and runs on Linux.
+- Hosted on Codeberg (codeberg.org/zedstarr/ppplink); Homebrew tap at
+  codeberg.org/zedstarr/homebrew-ppplink.
 - `make -C macos test`: a pty as the serial line and a scripted PPP client:
   LCP/IPCP, DNS through the relay (and after a nameserver change), TCP through
   slirp, hang-up and restart, stale link, replug, modem mode, debug bridge.
