@@ -35,10 +35,11 @@ EPOC Link builds (`org.psilink`) rather than replacing them.
 The phone itself is 10.0.2.2 from the client. In Automatic DNS mode, lookups go
 through the phone's current network (and its Private DNS setting).
 
-## macOS
-`macos/` has the same thing for the Mac: a `ppplink` command (Homebrew-friendly)
-and a menu-bar app, sharing one engine and this repo's patched slirp. See
-`macos/README.md`.
+## Linux and macOS
+`desktop/` has the same thing for computers: a `ppplink` command for any Linux
+(32- or 64-bit) and macOS, a systemd service for an always-on Linux box or
+Raspberry Pi, and a macOS menu-bar app. All share one engine and this repo's
+patched slirp. See `desktop/README.md`.
 
 ## Licences
 PPP Link is licensed under the Apache License 2.0 (see `LICENSE` and `NOTICE`).

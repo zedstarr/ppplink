@@ -1,19 +1,26 @@
-# PPP Link for macOS: command-line tool and shared engine.
+# PPP Link for Linux and macOS: the ppplink command, its engine and slirp.
 # Copyright 2026 zedstarr. Licensed under the Apache License, Version 2.0.
 #
-#   make                 build slirp and ppplink-engine into build/
-#   make install         install to $(PREFIX) (default /usr/local)
-#   make test            end-to-end test over a pty (needs python3)
-#   make app             build "PPP Link.app" (needs Swift / Xcode command line tools)
+#   make                     build slirp and ppplink-engine into build/
+#   make install             install to $(PREFIX) (default /usr/local)
+#   make test                end-to-end test over a pty (needs python3)
+#   make app                 macOS: build "PPP Link.app" (needs the Xcode command line tools)
+#   make install-service     Linux: install the systemd service (run with sudo, after install)
+#   make install-udev        Linux: keep ModemManager off USB serial adapters (sudo)
 #
-# slirp is built from the Android app's sources (app/src/main/cpp/slirp), so both
-# apps carry exactly the same patches. Also builds on Linux.
+# slirp is built from the Android app's sources (app/src/main/cpp/slirp), so every
+# version carries exactly the same patches.
 
 VERSION    ?= 1.0.0
 PREFIX     ?= /usr/local
 BINDIR     ?= $(PREFIX)/bin
 LIBEXECDIR ?= $(PREFIX)/libexec/ppplink
 DOCDIR     ?= $(PREFIX)/share/doc/ppplink
+SYSCONFDIR ?= /etc
+SYSTEMDDIR ?= /etc/systemd/system
+UDEVDIR    ?= /etc/udev/rules.d
+# The group that owns serial ports: dialout on Debian/Fedora/RHEL, uucp on Arch.
+SERIAL_GROUP ?= $(shell getent group dialout >/dev/null 2>&1 && echo dialout || echo uucp)
 SLIRP_SRC  ?= ../app/src/main/cpp/slirp
 BUILD      ?= build
 
@@ -52,7 +59,10 @@ ENGINE_SRCS = engine/ppplink-engine.c engine/dnsrelay.c
 
 all: $(BUILD)/slirp-bin $(BUILD)/ppplink-engine $(BUILD)/ppplink
 
-$(BUILD)/slirp/%.o: $(SLIRP_SRC)/%.c
+# Rebuild slirp when any of its headers (config.h included) change.
+SLIRP_HDRS = $(wildcard $(SLIRP_SRC)/*.h $(SLIRP_SRC)/ppp/*.h)
+
+$(BUILD)/slirp/%.o: $(SLIRP_SRC)/%.c $(SLIRP_HDRS)
 	@mkdir -p $(dir $@)
 	$(CC) $(ARCHFLAGS) $(SLIRP_CFLAGS) -c $< -o $@
 
@@ -83,6 +93,30 @@ uninstall:
 	rm -f $(DESTDIR)$(BINDIR)/ppplink
 	rm -rf $(DESTDIR)$(LIBEXECDIR) $(DESTDIR)$(DOCDIR)
 
+install-service:
+	@test -x $(DESTDIR)$(BINDIR)/ppplink || { echo "Run 'sudo make install' first"; exit 1; }
+	install -d $(DESTDIR)$(SYSTEMDDIR) $(DESTDIR)$(SYSCONFDIR)/ppplink
+	sed -e 's|@BINDIR@|$(BINDIR)|g' -e 's|@SYSCONFDIR@|$(SYSCONFDIR)|g' \
+	    -e 's|@SERIAL_GROUP@|$(SERIAL_GROUP)|g' linux/ppplink.service > $(DESTDIR)$(SYSTEMDDIR)/ppplink.service
+	chmod 644 $(DESTDIR)$(SYSTEMDDIR)/ppplink.service
+	PPPLINK_CONFIG=$(DESTDIR)$(SYSCONFDIR)/ppplink/ppplink.conf $(DESTDIR)$(BINDIR)/ppplink config init
+	@echo
+	@echo "Edit $(SYSCONFDIR)/ppplink/ppplink.conf if needed, then:"
+	@echo "  sudo systemctl daemon-reload"
+	@echo "  sudo systemctl enable --now ppplink"
+	@echo "  journalctl -u ppplink -f"
+
+uninstall-service:
+	-systemctl disable --now ppplink 2>/dev/null
+	rm -f $(DESTDIR)$(SYSTEMDDIR)/ppplink.service
+	@echo "Settings left in $(SYSCONFDIR)/ppplink/ (remove by hand if not wanted)."
+
+install-udev:
+	install -d $(DESTDIR)$(UDEVDIR)
+	install -m 644 linux/70-ppplink.rules $(DESTDIR)$(UDEVDIR)/70-ppplink.rules
+	-udevadm control --reload 2>/dev/null
+	@echo "Installed. Replug the adapter for it to take effect."
+
 test: all
 	python3 test/engine_test.py $(BUILD)/ppplink-engine $(BUILD)/slirp-bin
 
@@ -92,4 +126,4 @@ app: all
 clean:
 	rm -rf $(BUILD) app/.build
 
-.PHONY: all install uninstall test app clean
+.PHONY: all install uninstall install-service uninstall-service install-udev test app clean

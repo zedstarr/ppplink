@@ -1,0 +1,73 @@
+# Builds and tests the desktop version (desktop/): the ppplink command on Linux
+# (64-bit and 32-bit) and macOS, and the macOS menu-bar app.
+name: Desktop
+
+on:
+  push:
+    paths: ["desktop/**", "app/src/main/cpp/slirp/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["desktop/**", "app/src/main/cpp/slirp/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: x86_64
+            archflags: ""
+          - name: i386 (32-bit)
+            archflags: "-m32"
+    name: Linux ${{ matrix.name }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 32-bit compiler support
+        if: matrix.archflags == '-m32'
+        run: sudo apt-get update && sudo apt-get install -y gcc-multilib
+
+      - name: Build
+        run: make -C desktop ARCHFLAGS="${{ matrix.archflags }}"
+
+      - name: End-to-end test
+        run: make -C desktop test ARCHFLAGS="${{ matrix.archflags }}"
+
+      - name: Install test
+        run: |
+          make -C desktop install PREFIX="$RUNNER_TEMP/pl" ARCHFLAGS="${{ matrix.archflags }}"
+          "$RUNNER_TEMP/pl/bin/ppplink" version
+          "$RUNNER_TEMP/pl/bin/ppplink" setup
+          "$RUNNER_TEMP/pl/bin/ppplink" list
+
+      - name: Check the systemd unit
+        if: matrix.archflags == ''
+        run: |
+          sed 's|@BINDIR@|/usr/local/bin|g; s|@SYSCONFDIR@|/etc|g' desktop/linux/ppplink.service > "$RUNNER_TEMP/ppplink.service"
+          systemd-analyze verify "$RUNNER_TEMP/ppplink.service" || true
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build slirp, engine and ppplink
+        run: make -C desktop
+
+      - name: End-to-end test
+        run: make -C desktop test
+
+      - name: Install test
+        run: |
+          make -C desktop install PREFIX="$RUNNER_TEMP/pl"
+          "$RUNNER_TEMP/pl/bin/ppplink" version
+          "$RUNNER_TEMP/pl/bin/ppplink" setup
+          "$RUNNER_TEMP/pl/bin/ppplink" list
+
+      - name: Build PPP Link.app
+        run: ZIP=1 make -C desktop app
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PPP-Link-macOS
+          path: desktop/build/PPP-Link-*-macOS.zip

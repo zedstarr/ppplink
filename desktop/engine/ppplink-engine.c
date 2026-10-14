@@ -827,7 +827,8 @@ static int try_open_line(int first)
     if (fd < 0) {
         char msg[PATH_MAX + 64];
         snprintf(msg, sizeof msg, "Cannot open %s: %s", path, strerror(errno));
-        if (strcmp(msg, last_error) != 0) logmsg("%s", msg);
+        /* Human output shows it once as the state; the app also wants it in its log. */
+        if (opt.machine && strcmp(msg, last_error) != 0) logmsg("%s", msg);
         snprintf(last_error, sizeof last_error, "%s", msg);
         set_state("error", "%s", msg);
         return -1;

@@ -1,0 +1,8 @@
+# PPP Link: stop ModemManager probing USB serial adapters with AT commands
+# when they're plugged in, which can confuse a retro computer that is starting
+# a connection. Installed by `sudo make -C desktop install-udev`.
+# Prolific PL2303, FTDI, WCH CH34x, Silicon Labs CP210x.
+ACTION=="add|change", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="067b", ENV{ID_MM_DEVICE_IGNORE}="1"
+ACTION=="add|change", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="0403", ENV{ID_MM_DEVICE_IGNORE}="1"
+ACTION=="add|change", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="1a86", ENV{ID_MM_DEVICE_IGNORE}="1"
+ACTION=="add|change", SUBSYSTEM=="tty", SUBSYSTEMS=="usb", ATTRS{idVendor}=="10c4", ENV{ID_MM_DEVICE_IGNORE}="1"

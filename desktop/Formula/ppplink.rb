@@ -16,7 +16,7 @@ class Ppplink < Formula
   head "https://github.com/zedstarr/ppplink.git", branch: "main"
 
   def install
-    system "make", "-C", "macos", "install", "PREFIX=#{prefix}", "VERSION=#{version}"
+    system "make", "-C", "desktop", "install", "PREFIX=#{prefix}", "VERSION=#{version}"
   end
 
   def caveats

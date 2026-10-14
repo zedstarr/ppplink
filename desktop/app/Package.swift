@@ -1,5 +1,5 @@
 // swift-tools-version:5.7
-// PPP Link menu-bar app. Build the .app with ./make-app.sh (or `make app` in macos/).
+// PPP Link menu-bar app. Build the .app with ./make-app.sh (or `make app` in desktop/).
 import PackageDescription
 
 let package = Package(

@@ -11,14 +11,14 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
-MACOS="$(dirname "$HERE")"
+DESKTOP="$(dirname "$HERE")"
 VERSION="${VERSION:-1.0.0}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
-OUT="${OUT:-$MACOS/build}"
+OUT="${OUT:-$DESKTOP/build}"
 APP="$OUT/PPP Link.app"
 SIGN_IDENTITY="${SIGN_IDENTITY:--}"
 
-# Helpers are built under macos/build with relative paths, so a checkout whose
+# Helpers are built under desktop/build with relative paths, so a checkout whose
 # path contains spaces still works with make.
 if [ "${UNIVERSAL:-0}" = 1 ]; then
     ARCHFLAGS="-arch arm64 -arch x86_64"
@@ -29,10 +29,10 @@ else
     SWIFT_ARCHS=()
     HELPERS_REL="build/helpers"
 fi
-HELPERS="$MACOS/$HELPERS_REL"
+HELPERS="$DESKTOP/$HELPERS_REL"
 
 echo "==> Building ppplink-engine and slirp"
-make -C "$MACOS" BUILD="$HELPERS_REL" ARCHFLAGS="$ARCHFLAGS" VERSION="$VERSION" \
+make -C "$DESKTOP" BUILD="$HELPERS_REL" ARCHFLAGS="$ARCHFLAGS" VERSION="$VERSION" \
     "$HELPERS_REL/slirp-bin" "$HELPERS_REL/ppplink-engine"
 
 echo "==> Building the app"
@@ -48,7 +48,7 @@ cp "$HELPERS/ppplink-engine" "$APP/Contents/MacOS/ppplink-engine"
 cp "$HELPERS/slirp-bin" "$APP/Contents/MacOS/slirp"
 sed -e "s/@VERSION@/$VERSION/g" -e "s/@BUILD@/$BUILD_NUMBER/g" \
     "$HERE/Resources/Info.plist" > "$APP/Contents/Info.plist"
-cp "$MACOS/../LICENSE" "$MACOS/../NOTICE" "$MACOS/../THIRD_PARTY_NOTICES.txt" "$APP/Contents/Resources/"
+cp "$DESKTOP/../LICENSE" "$DESKTOP/../NOTICE" "$DESKTOP/../THIRD_PARTY_NOTICES.txt" "$APP/Contents/Resources/"
 
 # Icon: AppIcon.png (1024 px) -> AppIcon.icns
 ICONSET="$OUT/AppIcon.iconset"

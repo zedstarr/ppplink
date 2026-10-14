@@ -1,7 +1,8 @@
 # PPP Link — notes for Claude Code
 
 Android app (Kotlin + Compose, NDK) that acts as a PPP server for retro computers
-over a USB serial adapter, plus a macOS command and menu-bar app (`macos/`).
+over a USB serial adapter, plus a Linux/macOS command, Linux systemd service and
+macOS menu-bar app (`desktop/`).
 App ID `org.ppplink`. Author: zedstarr.
 Repository: https://github.com/zedstarr/ppplink (GitHub; not Codeberg, whose
 terms forbid AI-generated code).
@@ -18,6 +19,8 @@ terms forbid AI-generated code).
     slirp.ftpd on :21 removed).
   - `tcp_subr.c`: remote command console (telnet 10.0.2.0) disabled unless built
     with -DPPPLINK_CONTROL_CONSOLE. Never enable it in a release.
+  - `config.h`: SIZEOF_CHAR_P from `__LP64__` (was fixed at 8, which broke TCP/UDP
+    on 32-bit builds).
   - Config always includes `nozeros` (no five-0s exit / five-1s detach escape).
 - `ppplinknative.c` — JNI forkpty launcher for slirp (resets signal mask, EINTR-safe wait).
 - `LinkEngine.kt` — session control on a single-threaded dispatcher; one line reader
@@ -26,14 +29,18 @@ terms forbid AI-generated code).
 - `DnsRelay.kt` — answers slirp's DNS via Android DnsResolver on the current network.
 - `PppSniffer.kt` — read-only PPP frame watcher for status (handles ACFC/PFC).
 
-## macOS (`macos/`)
+## Linux and macOS (`desktop/`)
 - `engine/ppplink-engine.c` + `engine/dnsrelay.c`: one C program shared by the
-  `ppplink` command and the menu-bar app. Same behaviour as LinkEngine.kt; with
+  `ppplink` command, the Linux service and the menu-bar app. Same behaviour as LinkEngine.kt; with
   `--status machine` it prints `STATE/ADAPTER/DNS/BYTES/LOG` lines the app parses.
-- slirp is built by `macos/Makefile` straight from `app/src/main/cpp/slirp`.
+- slirp is built by `desktop/Makefile` straight from `app/src/main/cpp/slirp`.
   Don't fork a copy: patches must stay shared. Any slirp change must still build
-  for Android (CMake) and macOS/Linux (Makefile).
-- `bin/ppplink`: must run on macOS's bash 3.2 (no associative arrays, no
+  for Android (CMake) and macOS/Linux (Makefile), 64- and 32-bit
+  (`make ARCHFLAGS=-m32 test` on Linux with gcc-multilib).
+- `linux/ppplink.service` (DynamicUser, SupplementaryGroups=dialout/uucp, settings
+  in /etc/ppplink/ppplink.conf) and `linux/70-ppplink.rules` (ModemManager ignore),
+  installed by `make install-service` / `make install-udev`.
+- `bin/ppplink`: runs on Linux and macOS; must work with macOS's bash 3.2 (no associative arrays, no
   `${var,,}`, no `mapfile`; guard empty arrays under `set -u`).
 - `app/`: SwiftPM package (macOS 13+, no Xcode project). `make-app.sh` builds the
   helpers, `swift build`, assembles `build/PPP Link.app` with `ppplink-engine` and
@@ -46,10 +53,12 @@ terms forbid AI-generated code).
 - `Formula/ppplink.rb`: template for the tap at github.com/zedstarr/homebrew-ppplink;
   update `url` (https://github.com/zedstarr/ppplink/archive/refs/tags/vX.Y.Z.tar.gz)
   and `sha256` per release.
-- Status: the command works with the MC218 on a Mac; the app builds with the
-  Command Line Tools (`make -C macos app`) and runs. Build and test:
-  `make -C macos && make -C macos test && make -C macos app`.
-- CI: `.github/workflows/macos.yml` builds, tests and packages on a macOS runner.
+- Status: tested on Linux (x86_64 and i386, gcc and clang); the command works
+  with the MC218 on a Mac; the app builds with the
+  Command Line Tools (`make -C desktop app`) and runs. Build and test:
+  `make -C desktop && make -C desktop test && make -C desktop app`.
+- CI: `.github/workflows/desktop.yml` tests on Linux x86_64 and i386 and on macOS,
+  and builds the macOS app.
 
 ## Constraints
 - Project licence: Apache-2.0 (`LICENSE`, `NOTICE`), copyright zedstarr.
@@ -87,5 +96,5 @@ terms forbid AI-generated code).
    asks, vendor the library source (MIT) as a Gradle module.
 
 ## Testing
-macOS/Linux engine: `make -C macos test`. Android: no unit tests yet. Verify on device: plug adapter -> Ready -> client connects ->
+macOS/Linux engine: `make -C desktop test`. Android: no unit tests yet. Verify on device: plug adapter -> Ready -> client connects ->
 Connected; DNS resolves; unplug/replug resumes; client hang-up restarts slirp.

@@ -1,0 +1,33 @@
+# PPP Link as an always-on Linux service.
+# Installed by `sudo make -C desktop install-service`; settings in
+# @SYSCONFDIR@/ppplink/ppplink.conf. Logs: journalctl -u ppplink -f
+[Unit]
+Description=PPP Link - PPP server for retro computers on a USB serial adapter
+Documentation=https://github.com/zedstarr/ppplink
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Environment=PPPLINK_CONFIG=@SYSCONFDIR@/ppplink/ppplink.conf
+# Waits for the adapter and follows unplug/replug (WAIT=yes in the settings).
+ExecStart=@BINDIR@/ppplink start --no-keep-awake
+Restart=on-failure
+RestartSec=5
+
+# Runs as a throwaway unprivileged user that may only use serial ports.
+DynamicUser=yes
+SupplementaryGroups=@SERIAL_GROUP@
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+RestrictNamespaces=yes
+LockPersonality=yes
+
+[Install]
+WantedBy=multi-user.target

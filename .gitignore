@@ -5,7 +5,7 @@ local.properties
 build/
 app/build/
 app/.cxx/
-macos/build/
-macos/app/.build/
+desktop/build/
+desktop/app/.build/
 *.apk
 *.aab

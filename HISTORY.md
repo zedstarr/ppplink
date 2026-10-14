@@ -127,3 +127,22 @@ New: SerialLine.kt. Removed: DebugTcpBridge.kt.
 - `make -C macos test`: a pty as the serial line and a scripted PPP client:
   LCP/IPCP, DNS through the relay (and after a nameserver change), TCP through
   slirp, hang-up and restart, stale link, replug, modem mode, debug bridge.
+
+# Linux
+
+- `macos/` renamed `desktop/`: the command, engine and slirp build were already
+  portable; Linux is now a supported target alongside macOS.
+- slirp `config.h`: pointer size comes from the target instead of being fixed at
+  8. On 32-bit builds (32-bit Raspberry Pi OS, i386) the old value padded slirp's
+  IP overlay header wrongly, so the link came up but DNS and TCP failed (7 test
+  failures on an i386 build before the fix, none after). Android is unaffected
+  (64-bit only).
+- Makefile: slirp objects now rebuild when its headers change.
+- `ppplink` on Linux: keeps the machine awake with systemd-inhibit; warns when the
+  user can't open the port (dialout group); explains brltty grabbing CH340
+  adapters; lists /dev/serial/by-id names.
+- `desktop/linux/ppplink.service`: always-on service as a throwaway unprivileged
+  user, settings in /etc/ppplink/ppplink.conf (`make install-service`).
+- `desktop/linux/70-ppplink.rules`: keeps ModemManager off USB serial adapters
+  (`make install-udev`).
+- CI tests Linux x86_64, Linux i386 and macOS.

@@ -140,7 +140,14 @@
 /* #undef SIZEOF_INT */
 
 /* Define to sizeof(char *) */
+/* PPP Link: from the target, not hard-coded to 8. ip.h pads struct ipovly to
+ * 20 bytes from this; a wrong value breaks TCP and UDP on 32-bit builds
+ * (e.g. 32-bit Raspberry Pi OS, i386). */
+#if defined(__LP64__) || defined(_LP64)
 #define SIZEOF_CHAR_P 8
+#else
+#define SIZEOF_CHAR_P 4
+#endif
 
 /* Define if you have random() */
 #define HAVE_RANDOM 1
