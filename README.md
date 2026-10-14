@@ -1,6 +1,6 @@
 # PPP Link
 
-An Android PPP server for retro computers. Plug a USB serial adapter into the
+An Android/Linux/MacOS PPP server for retro computers. Plug a USB serial adapter into the
 phone, connect it to any machine with a serial port and a PPP stack, and the
 machine gets onto the internet through the phone's connection. No root.
 
